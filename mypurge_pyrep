@@ -1,0 +1,88 @@
+#!/bin/bash
+
+# Patrón específico para eliminar
+PATTERN="*.pyrep.bak"
+
+# Función para mostrar ayuda
+show_help() {
+    echo "Uso: mypurge_pyrep [OPCIONES]"
+    echo ""
+    echo "Busca y elimina archivos con el patrón '$PATTERN' de forma recursiva."
+    echo ""
+    echo "Opciones:"
+    echo "  -h, --help    Muestra este mensaje de ayuda y sale"
+    echo "  --force       Elimina todos los archivos encontrados sin pedir confirmación"
+    echo ""
+    echo "Ejemplo:"
+    echo "  mypurge_pyrep          (modo interactivo)"
+    echo "  mypurge_pyrep --force  (elimina sin preguntar)"
+    exit 0
+}
+
+# Verifica los argumentos
+FORCE=false
+for arg in "$@"; do
+    case $arg in
+        -h|--help)
+            show_help
+            ;;
+        --force)
+            FORCE=true
+            ;;
+        *)
+            echo "Opción desconocida: $arg"
+            echo "Usa 'mypurge_pyrep --help' para ver las opciones disponibles."
+            exit 1
+            ;;
+    esac
+done
+
+echo "mypurge_pyrep: Limpieza de archivos '$PATTERN' iniciada. 🚀"
+
+# Preguntar si se quiere buscar archivos de este tipo
+echo "¿Quieres buscar y eliminar archivos con el patrón '$PATTERN'? (s/n)"
+read -r confirm_pattern
+
+if [[ "$confirm_pattern" != "s" && "$confirm_pattern" != "y" ]]; then
+    echo "Búsqueda cancelada. ❌"
+    exit 0
+fi
+
+# Buscar archivos
+files_found=$(find . -type f -name "$PATTERN")
+
+if [[ -z "$files_found" ]]; then
+    echo "No se encontraron archivos con el patrón '$PATTERN'. ✅"
+    exit 0
+fi
+
+echo "Se encontraron los siguientes archivos:"
+echo "$files_found"
+echo "¿Quieres proceder a eliminarlos? (s/n)"
+read -r confirm_delete
+
+if [[ "$confirm_delete" != "s" && "$confirm_delete" != "y" ]]; then
+    echo "Eliminación cancelada. ❌"
+    exit 0
+fi
+
+# Eliminar archivos
+echo "Eliminando archivos '$PATTERN'..."
+for file in $files_found; do
+    if [ "$FORCE" = true ]; then
+        rm "$file"
+        echo "Eliminado: $file"
+    else
+        echo "¿Eliminar '$file'? (s/n)"
+        read -r confirm_file
+        if [[ "$confirm_file" == "s" || "$confirm_file" == "y" ]]; then
+            rm "$file"
+            echo "Eliminado: $file"
+        else
+            echo "Omitido: $file"
+        fi
+    fi
+done
+
+echo "mypurge_pyrep: Limpieza completada. ✅"
+
