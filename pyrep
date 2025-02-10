@@ -1,29 +1,90 @@
 #!/bin/bash
 
+# Función de ayuda
+function show_help() {
+    echo "Uso: $0 <patrón_a_buscar> <nuevo_texto>"
+    echo ""
+    echo "Este script busca y reemplaza un patrón en archivos .py utilizando 'sd' si está disponible,"
+    echo "o 'sed' si 'sd' no está instalado."
+    echo ""
+    echo "Opciones:"
+    echo "  -h, --help     Muestra esta ayuda y sale"
+    echo ""
+    echo "Ejemplo:"
+    echo "  $0 'foo' 'bar'    # Reemplaza 'foo' por 'bar' en todos los archivos .py"
+    echo ""
+    echo "Notas:"
+    echo "  - Se crean backups de los archivos antes de modificarlos con la extensión '.pyrep.bak'."
+    echo "  - Si 'sd' está instalado, se usará preferentemente."
+    echo "  - Si 'sd' no está disponible, se usará 'sed' (GNU sed en Linux)."
+    exit 0
+}
+
+# Verifica si el usuario pidió ayuda
+if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+    show_help
+fi
+
 # Verifica que se proporcionaron los argumentos correctos
 if [ "$#" -ne 2 ]; then
-    echo "Uso: $0 <patrón_a_buscar> <nuevo_texto>"
+    echo "Error: Número incorrecto de argumentos."
+    echo "Usa '$0 --help' para más información."
     exit 1
 fi
 
 PATTERN=$1
 REPLACEMENT=$2
 
-# Verifica si ripgrep y sd están instalados
-if ! command -v rg &> /dev/null || ! command -v sd &> /dev/null; then
-    echo "Error: Asegúrate de tener instalados 'ripgrep' (rg) y 'sd'."
+# Verifica si ripgrep está instalado
+if ! command -v rg &> /dev/null; then
+    echo "Error: 'ripgrep' (rg) no está instalado."
     exit 1
+fi
+
+# Verifica si sd está instalado; si no, intenta usar sed
+USE_SD=false
+USE_SED=false
+
+if command -v sd &> /dev/null; then
+    USE_SD=true
+    echo "Usando 'sd' para el reemplazo."
+elif command -v sed &> /dev/null; then
+    USE_SED=true
+    echo "Usando 'sed' para el reemplazo."
+else
+    echo "Error: No se encontró ni 'sd' ni 'sed'. Instala al menos una de ellas."
+    exit 1
+fi
+
+# Buscar archivos que contienen el patrón
+FILES=$(rg -l "$PATTERN" -g "*.py")
+
+if [ -z "$FILES" ]; then
+    echo "No se encontraron archivos con el patrón '$PATTERN'."
+    exit 0
 fi
 
 # Crear backups antes de modificar archivos
 echo "Creando backups de los archivos antes de modificar..."
-rg -l "$PATTERN" -g "*.py" | while read -r file; do
-    cp "$file" "$file.pyrep.bak"
-done
+while IFS= read -r file; do
+    BACKUP_FILE="$file.pyrep.bak"
+    if [ ! -f "$BACKUP_FILE" ]; then
+        cp "$file" "$BACKUP_FILE"
+    else
+        echo "Aviso: El backup '$BACKUP_FILE' ya existe. No se sobrescribirá."
+    fi
+done <<< "$FILES"
 
 # Realizar el reemplazo en los archivos .py
 echo "Reemplazando '$PATTERN' por '$REPLACEMENT' en archivos .py..."
-rg -l "$PATTERN" -g "*.py" | xargs sd "$PATTERN" "$REPLACEMENT"
+
+if [ "$USE_SD" = true ]; then
+    echo "$FILES" | xargs -d '\n' sd "$PATTERN" "$REPLACEMENT"
+elif [ "$USE_SED" = true ]; then
+    while IFS= read -r file; do
+        sed -i "s/$PATTERN/$REPLACEMENT/g" "$file"
+    done <<< "$FILES"
+fi
 
 echo "Proceso completado. Se han reemplazado todas las coincidencias."
 echo "Si algo salió mal, puedes restaurar los archivos desde los backups (.pyrep.bak)."
