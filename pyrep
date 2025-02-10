@@ -1,0 +1,30 @@
+#!/bin/bash
+
+# Verifica que se proporcionaron los argumentos correctos
+if [ "$#" -ne 2 ]; then
+    echo "Uso: $0 <patrón_a_buscar> <nuevo_texto>"
+    exit 1
+fi
+
+PATTERN=$1
+REPLACEMENT=$2
+
+# Verifica si ripgrep y sd están instalados
+if ! command -v rg &> /dev/null || ! command -v sd &> /dev/null; then
+    echo "Error: Asegúrate de tener instalados 'ripgrep' (rg) y 'sd'."
+    exit 1
+fi
+
+# Crear backups antes de modificar archivos
+echo "Creando backups de los archivos antes de modificar..."
+rg -l "$PATTERN" -g "*.py" | while read -r file; do
+    cp "$file" "$file.pyrep.bak"
+done
+
+# Realizar el reemplazo en los archivos .py
+echo "Reemplazando '$PATTERN' por '$REPLACEMENT' en archivos .py..."
+rg -l "$PATTERN" -g "*.py" | xargs sd "$PATTERN" "$REPLACEMENT"
+
+echo "Proceso completado. Se han reemplazado todas las coincidencias."
+echo "Si algo salió mal, puedes restaurar los archivos desde los backups (.pyrep.bak)."
+

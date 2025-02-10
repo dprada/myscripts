@@ -1,0 +1,33 @@
+
+#!/bin/bash
+
+# Patrones de archivos a eliminar (puedes agregar más)
+PATTERNS=("*~" "*.pyrep.bak" "#*" "*.pyc")
+
+# Verifica si se pasó el argumento --force para eliminar sin preguntar
+FORCE=false
+if [[ "$1" == "--force" ]]; then
+    FORCE=true
+fi
+
+# Buscar y eliminar archivos que coincidan con los patrones
+echo "Buscando archivos para eliminar..."
+for pattern in "${PATTERNS[@]}"; do
+    find . -type f -name "$pattern" | while read -r file; do
+        if [ "$FORCE" = true ]; then
+            rm "$file"
+            echo "Eliminado: $file"
+        else
+            echo "¿Eliminar '$file'? (s/n)"
+            read -r confirm
+            if [[ "$confirm" == "s" || "$confirm" == "y" ]]; then
+                rm "$file"
+                echo "Eliminado: $file"
+            else
+                echo "Omitido: $file"
+            fi
+        fi
+    done
+done
+
+echo "Limpieza completa. 🚀"
