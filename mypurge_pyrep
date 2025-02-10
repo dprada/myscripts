@@ -39,15 +39,6 @@ done
 
 echo "mypurge_pyrep: Limpieza de archivos '$PATTERN' iniciada. 🚀"
 
-# Preguntar si se quiere buscar archivos de este tipo
-echo "¿Quieres buscar y eliminar archivos con el patrón '$PATTERN'? (s/n)"
-read -r confirm_pattern
-
-if [[ "$confirm_pattern" != "s" && "$confirm_pattern" != "y" ]]; then
-    echo "Búsqueda cancelada. ❌"
-    exit 0
-fi
-
 # Buscar archivos
 files_found=$(find . -type f -name "$PATTERN")
 
